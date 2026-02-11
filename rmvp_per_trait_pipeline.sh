@@ -12,7 +12,7 @@ THREADS="${THREADS:-80}"
 # Per-trait hard filters requested by user
 MAF_THR="${MAF_THR:-0.05}"          # remove MAF < 0.05
 GENO_THR="${GENO_THR:-0.20}"        # remove missing rate > 0.20
-HET_RATE_THR="${HET_RATE_THR:-0.10}"# remove heterozygosity rate > 0.10
+HET_RATE_THR="${HET_RATE_THR:-0.10}" # remove heterozygosity rate > 0.10
 
 MIN_N_BUILD_GENO="${MIN_N_BUILD_GENO:-60}"
 
@@ -276,6 +276,10 @@ def norm(s):
 
 with open(infile, 'r', encoding='utf-8', errors='replace') as f:
     header=f.readline().strip()
+    if not header:
+        open(out, 'w', encoding='utf-8').close()
+        print("[WARN] empty gcount file; no variants passed het filter", file=sys.stderr)
+        raise SystemExit(0)
     cols=re.split(r'[\t ]+', header)
     idx={norm(c):i for i,c in enumerate(cols)}
 
