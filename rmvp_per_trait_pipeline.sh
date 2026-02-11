@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Per-trait genotype extraction + filtering + RMVP scaffold generation.
-# Filters are applied AFTER trait-specific sample extraction.
+# Filters are applied on trait-specific samples via --keep (no per-trait subset .pgen/.pvar created).
 
 VCF="${VCF:-lc7733all.PASS.ACGT.GTonly.merged.vcf.gz}"
 PHE="${PHE:-lc3k.txt}"
@@ -229,25 +229,16 @@ for ((k=0; k<NT; k++)); do
   fi
 
   mkdir -p "$trait_path/geno"
-  subset="$trait_path/geno/${trait_dir}.subset"
   outpref="$trait_path/geno/${trait_dir}"
   basic="$trait_path/geno/${trait_dir}.pass_basic"
   gcount="$trait_path/geno/${trait_dir}.gcount"
   hetkeep="$trait_path/geno/${trait_dir}.pass_het.snplist"
 
-  # Step A: subset samples first (no variant filtering)
+  # Step A: per-trait MAF + missing (computed on trait-specific samples via --keep)
   plink2 \
     --pfile "$BASE/base" \
     --allow-extra-chr \
     --keep "$keep" \
-    --make-pgen \
-    --out "$subset" \
-    --threads "$THREADS"
-
-  # Step B: per-trait MAF + missing
-  plink2 \
-    --pfile "$subset" \
-    --allow-extra-chr \
     --maf "$MAF_THR" \
     --geno "$GENO_THR" \
     --write-snplist \
@@ -258,10 +249,11 @@ for ((k=0; k<NT; k++)); do
     warn "No variants survived MAF/geno for $trait_dir"
     : > "$hetkeep"
   else
-    # Step C: heterozygosity filter (variant-level het rate)
+    # Step B: heterozygosity filter (variant-level het rate)
     plink2 \
-      --pfile "$subset" \
+      --pfile "$BASE/base" \
       --allow-extra-chr \
+      --keep "$keep" \
       --extract "$basic.snplist" \
       --geno-counts \
       --out "$gcount" \
@@ -328,10 +320,11 @@ PY
     continue
   fi
 
-  # Step D: final per-trait bed/bim/fam
+  # Step C: final per-trait bed/bim/fam
   plink2 \
-    --pfile "$subset" \
+    --pfile "$BASE/base" \
     --allow-extra-chr \
+    --keep "$keep" \
     --extract "$hetkeep" \
     --make-bed \
     --out "$outpref" \
